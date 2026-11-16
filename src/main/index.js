@@ -60,6 +60,40 @@ const listElectores = (_event, options) => {
   return { rows, total }
 }
 
+const createElector = (_event, elector) => {
+  const fields = ['nacionalidad', 'cedula', 'apellidos_nombres', 'centro', 'fecha_nacimiento']
+  const values = Object.fromEntries(
+    fields.map((field) => [field, typeof elector?.[field] === 'string' ? elector[field].trim() : ''])
+  )
+
+  if (!['V', 'E'].includes(values.nacionalidad)) {
+    throw new TypeError('Selecciona una nacionalidad válida.')
+  }
+  if (!values.cedula || values.cedula.length > 20) {
+    throw new TypeError('La cédula es obligatoria y no debe exceder 20 caracteres.')
+  }
+  if (!values.apellidos_nombres || values.apellidos_nombres.length > 200) {
+    throw new TypeError('Los apellidos y nombres son obligatorios y no deben exceder 200 caracteres.')
+  }
+  if (values.centro.length > 200 || !values.fecha_nacimiento || values.fecha_nacimiento.length > 20) {
+    throw new TypeError('El centro o la fecha de nacimiento no son válidos.')
+  }
+
+  const existing = db.prepare('SELECT id FROM electores WHERE cedula = ?').get(values.cedula)
+  if (existing) {
+    throw new Error('Ya existe un elector registrado con esa cédula.')
+  }
+
+  const result = db.prepare(`
+    INSERT INTO electores
+      (nacionalidad, cedula, apellidos_nombres, centro, fecha_nacimiento)
+    VALUES
+      (:nacionalidad, :cedula, :apellidos_nombres, :centro, :fecha_nacimiento)
+  `).run(values)
+
+  return { id: Number(result.lastInsertRowid) }
+}
+
 const listaElectores = () => {
   const lista = db.prepare(
     `SELECT id, cedula, apellidos_nombres, fecha_nacimiento
@@ -116,5 +150,6 @@ app.whenReady().then(() => {
   //obtenerElector()
   createDataBase()
   ipcMain.handle('electores:listar', listElectores)
+  ipcMain.handle('electores:crear', createElector)
   createWindow()
 })

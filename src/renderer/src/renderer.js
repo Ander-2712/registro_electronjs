@@ -40,6 +40,16 @@ const openModal = (elector) => {
   modal.classList.add('flex')
 }
 
+const openNewElectorModal = () => {
+  const modal = document.getElementById('new-elector-modal')
+  const form = document.getElementById('new-elector-form')
+  form.reset()
+  document.getElementById('new-elector-error').classList.add('hidden')
+  modal.classList.remove('hidden')
+  modal.classList.add('flex')
+  form.elements.nacionalidad.focus()
+}
+
 const renderElectores = (rows, total) => {
   totalRecords = total
   const tableBody = document.getElementById('electores-table-body')
@@ -126,6 +136,49 @@ const loadElectores = async () => {
 
 const main = () => {
   handleNavBar()
+
+  const newElectorModal = document.getElementById('new-elector-modal')
+  const closeNewElectorModal = () => {
+    newElectorModal.classList.add('hidden')
+    newElectorModal.classList.remove('flex')
+  }
+
+  document.getElementById('nuevo-elector-desktop-btn').addEventListener('click', openNewElectorModal)
+  document.getElementById('nuevo-elector-mobile-btn').addEventListener('click', () => {
+    document.getElementById('mobile-menu').classList.add('hidden')
+    document.getElementById('hamburger-icon').classList.remove('hidden')
+    document.getElementById('close-icon').classList.add('hidden')
+    openNewElectorModal()
+  })
+  document.getElementById('close-new-elector').addEventListener('click', closeNewElectorModal)
+  document.getElementById('cancel-new-elector').addEventListener('click', closeNewElectorModal)
+  newElectorModal.addEventListener('click', (event) => {
+    if (event.target === newElectorModal) closeNewElectorModal()
+  })
+
+  document.getElementById('new-elector-form').addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const errorMessage = document.getElementById('new-elector-error')
+    const saveButton = document.getElementById('save-new-elector')
+    const elector = Object.fromEntries(new FormData(form).entries())
+    saveButton.disabled = true
+    errorMessage.classList.add('hidden')
+
+    try {
+      await window.electoresAPI.crear(elector)
+      closeNewElectorModal()
+      state.page = 1
+      state.search = ''
+      document.getElementById('elector-search').value = ''
+      await loadElectores()
+    } catch (error) {
+      errorMessage.textContent = error.message || 'No se pudo guardar el elector.'
+      errorMessage.classList.remove('hidden')
+    } finally {
+      saveButton.disabled = false
+    }
+  })
 
   const modal = document.getElementById('modal')
   const closeModal = () => {
